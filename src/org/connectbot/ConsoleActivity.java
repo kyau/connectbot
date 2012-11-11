@@ -407,6 +407,7 @@ public class ConsoleActivity extends Activity {
 		});
 
 		actionBar = ActionBarWrapper.getActionBar(this);
+		actionBar.setDisplayHomeAsUpEnabled(true);
 		actionBar.hide();
 		actionBar.addOnMenuVisibilityListener(new ActionBarWrapper.OnMenuVisibilityListener() {
 			public void onMenuVisibilityChanged(boolean isVisible) {
@@ -855,6 +856,19 @@ public class ConsoleActivity extends Activity {
 		resize.setEnabled(sessionOpen);
 
 		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+			case android.R.id.home:
+				Intent intent = new Intent(this, HostListActivity.class);
+				intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+				startActivity(intent);
+				return true;
+			default:
+				return super.onOptionsItemSelected(item);
+		}
 	}
 
 	@Override
