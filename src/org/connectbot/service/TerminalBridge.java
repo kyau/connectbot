@@ -61,7 +61,7 @@ import de.mud.terminal.vt320;
 public class TerminalBridge implements VDUDisplay {
 	public final static String TAG = "ConnectBot.TerminalBridge";
 
-	public final static int DEFAULT_FONT_SIZE = 10;
+	public final static int DEFAULT_FONT_SIZE = 18;
 	private final static int FONT_SIZE_STEP = 2;
 
 	public Integer[] color;
@@ -172,11 +172,14 @@ public class TerminalBridge implements VDUDisplay {
 		// create prompt helper to relay password and hostkey requests up to gui
 		promptHelper = new PromptHelper(this);
 
+        // load custom font
+        Typeface tf = Typeface.createFromAsset(manager.getAssets(),"fonts/Terminus.ttf");
+
 		// create our default paint
 		defaultPaint = new Paint();
 		defaultPaint.setAntiAlias(true);
-		defaultPaint.setTypeface(Typeface.MONOSPACE);
-		defaultPaint.setFakeBoldText(true); // more readable?
+		defaultPaint.setTypeface(tf);
+        defaultPaint.setSubpixelText(true);
 
 		localOutput = new LinkedList<String>();
 
@@ -707,7 +710,10 @@ public class TerminalBridge implements VDUDisplay {
 					// set underlined attributes if requested
 					defaultPaint.setUnderlineText((currAttr & VDUBuffer.UNDERLINE) != 0);
 
-					isWideCharacter = (currAttr & VDUBuffer.FULLWIDTH) != 0;
+                    // set fakebold attributes if requested
+                    defaultPaint.setFakeBoldText((currAttr & VDUBuffer.BOLD) != 0);
+
+                    isWideCharacter = (currAttr & VDUBuffer.FULLWIDTH) != 0;
 
 					if (isWideCharacter)
 						addr++;

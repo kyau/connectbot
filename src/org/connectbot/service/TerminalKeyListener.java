@@ -230,7 +230,7 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 							&& sendFunctionKey(keyCode))
 						return true;
 
-					uchar = keyAsControl(key);
+					uchar = keyAsControl(uchar);
 				}
 
 				// handle pressing f-keys
