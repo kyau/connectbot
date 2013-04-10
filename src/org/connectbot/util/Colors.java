@@ -23,23 +23,23 @@ package org.connectbot.util;
  */
 public class Colors {
 	public final static Integer[] defaults = new Integer[] {
-			0xff000000, // black
-			0xffcc0000, // red
-			0xff00cc00, // green
-			0xffcccc00, // brown
-			0xff0000cc, // blue
-			0xffcc00cc, // purple
-			0xff00cccc, // cyan
-			0xffcccccc, // light grey
-			0xff444444, // dark grey
-			0xffff4444, // light red
-			0xff44ff44, // light green
-			0xffffff44, // yellow
-			0xff4444ff, // light blue
-			0xffff44ff, // light purple
-			0xff44ffff, // light cyan
-			0xffffffff, // white
-			0xff000000, 0xff00005f, 0xff000087, 0xff0000af, 0xff0000d7,
+			0xff222946, // black
+			0xffbe1919, // red
+			0xff1aaa13, // green
+			0xffffaa3e, // brown
+			0xff3a57d7, // blue
+			0xffbe007f, // purple
+			0xff258f8f, // cyan
+			0xffaeaeae, // light grey
+			0xff8c8b89, // dark grey
+			0xffdc2f32, // light red
+			0xff5dce33, // light green
+			0xfffadd2d, // yellow
+			0xff507cff, // light blue
+			0xffe671d3, // light purple
+			0xff4dc5dc, // light cyan
+			0xffdbdde4, // white
+			0xff000000, 0xff090c19, 0xffe6e6e6, 0xff0000af, 0xff0000d7,
 			0xff0000ff, 0xff005f00, 0xff005f5f, 0xff005f87, 0xff005faf,
 			0xff005fd7, 0xff005fff, 0xff008700, 0xff00875f, 0xff008787,
 			0xff0087af, 0xff0087d7, 0xff0087ff, 0xff00af00, 0xff00af5f,
