@@ -5,6 +5,10 @@ To compile ConnectBot using Ant, you must specify where your Android SDK is via 
 
 sdk.dir=/usr/local/android
 
+Optionally if the Android SDK is already setup in your PATH you can generate a local.properties file with the command:
+
+android update project -p .
+
 
 ProGuard Support
 ----------------
@@ -14,3 +18,21 @@ Download the ProGuard distribution from its website at http://proguard.sourcefor
 When running ant to build ConnectBot and engage ProGuard, use:
 
 ant proguard release
+
+Modifications
+-------------
+
+Icon used is borrowed from Android Terminal Emulator
+- Designed by Nathanel Titane, nathanel.titane@gmail.com, TNDesigns
+
+The Terminus font being used can be found @ http://files.ax86.net/terminus-ttf/
+- Original font by Dimitar Zhekov
+- GNU Public License v2 (4.30) / SIL Open Font License (4.32+)
+
+Terminal color scheme being used is Euphrasia
+- Thanks to bohoomil (http://bohoomil.deviantart.com/art/euphrasia-colours-for-X-environment-and-tty-340068994)
+
+TF201 Keyboard Modifications
+- Originally done by Wayne Davison
+
+Other random code/patches that I have included from various other sources. If I have forgotten to give you credit please let me know and I will add it to this list.
