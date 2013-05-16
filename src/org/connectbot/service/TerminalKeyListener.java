@@ -87,6 +87,8 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 
 	private final SharedPreferences prefs;
 
+	private boolean vibrateKey = true;
+
 	public TerminalKeyListener(TerminalManager manager,
 			TerminalBridge bridge,
 			VDUBuffer buffer,
@@ -157,13 +159,13 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 			}
 
 			// check for terminal resizing keys
-			if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-				bridge.increaseFontSize();
-				return true;
-			} else if(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-				bridge.decreaseFontSize();
-				return true;
-			}
+			//if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+			//	bridge.increaseFontSize();
+			//	return true;
+			//} else if(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+			//	bridge.decreaseFontSize();
+			//	return true;
+			//}
 
 			// skip keys if we aren't connected yet or have been disconnected
 			if (bridge.isDisconnected() || bridge.transport == null)
@@ -176,6 +178,29 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 				byte[] input = event.getCharacters().getBytes(encoding);
 				bridge.transport.write(input);
 				return true;
+			}
+
+			// No vibration for modifiers or backspace
+			if (keyCode == KeyEvent.KEYCODE_DEL)
+				vibrateKey = false;
+			else if (keyCode == KeyEvent.KEYCODE_SHIFT_LEFT)
+				vibrateKey = false;
+			else if (keyCode == KeyEvent.KEYCODE_SHIFT_RIGHT)
+				vibrateKey = false;
+			else if (keyCode == KeyEvent.KEYCODE_ALT_LEFT)
+				vibrateKey = false;
+			else if (keyCode == KeyEvent.KEYCODE_ALT_RIGHT)
+				vibrateKey = false;
+			else if (keyCode == KeyEvent.KEYCODE_CTRL_LEFT)
+				vibrateKey = false;
+			else if (keyCode == KeyEvent.KEYCODE_CTRL_RIGHT)
+				vibrateKey = false;
+			else
+				vibrateKey = true;
+
+			// Vibrate if necessary
+			if (vibrateKey == true) {
+				bridge.tryKeyVibrate();
 			}
 
 			int curMetaState = event.getMetaState();
@@ -377,7 +402,7 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 					((vt320) buffer).keyPressed(vt320.KEY_LEFT, ' ',
 							getStateForBuffer());
 					metaState &= ~META_TRANSIENT;
-					bridge.tryKeyVibrate();
+					//bridge.tryKeyVibrate();
 				}
 				return true;
 
@@ -389,7 +414,7 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 					((vt320) buffer).keyPressed(vt320.KEY_UP, ' ',
 							getStateForBuffer());
 					metaState &= ~META_TRANSIENT;
-					bridge.tryKeyVibrate();
+					//bridge.tryKeyVibrate();
 				}
 				return true;
 
@@ -401,7 +426,7 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 					((vt320) buffer).keyPressed(vt320.KEY_DOWN, ' ',
 							getStateForBuffer());
 					metaState &= ~META_TRANSIENT;
-					bridge.tryKeyVibrate();
+					//bridge.tryKeyVibrate();
 				}
 				return true;
 
@@ -413,7 +438,7 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 					((vt320) buffer).keyPressed(vt320.KEY_RIGHT, ' ',
 							getStateForBuffer());
 					metaState &= ~META_TRANSIENT;
-					bridge.tryKeyVibrate();
+					//bridge.tryKeyVibrate();
 				}
 				return true;
 
@@ -450,26 +475,26 @@ public class TerminalKeyListener implements OnKeyListener, OnSharedPreferenceCha
 			case KeyEvent.KEYCODE_PAGE_UP:
 				((vt320) buffer).keyPressed(vt320.KEY_PAGE_UP, ' ',getStateForBuffer());
 				metaState &= ~META_TRANSIENT;
-				bridge.tryKeyVibrate();
+				//bridge.tryKeyVibrate();
 				return true;
 			case KeyEvent.KEYCODE_PAGE_DOWN:
 				((vt320) buffer).keyPressed(vt320.KEY_PAGE_DOWN, ' ',getStateForBuffer());
 				metaState &= ~META_TRANSIENT;
-				bridge.tryKeyVibrate();
+				//bridge.tryKeyVibrate();
 				return true;
 			case KeyEvent.KEYCODE_MOVE_HOME:
 //				((vt320) buffer).keyPressed(vt320.KEY_HOME, ' ',getStateForBuffer());
 				((vt320)buffer).keyTyped(vt320.KEY_ESCAPE, ' ', 0);
 				bridge.transport.write("[1~".getBytes());
 				metaState &= ~META_TRANSIENT;
-				bridge.tryKeyVibrate();
+				//bridge.tryKeyVibrate();
 				return true;
 			case KeyEvent.KEYCODE_MOVE_END:
 //				((vt320) buffer).keyPressed(vt320.KEY_END, ' ',getStateForBuffer());
 				((vt320)buffer).keyTyped(vt320.KEY_ESCAPE, ' ', 0);
 				bridge.transport.write("[4~".getBytes());
 				metaState &= ~META_TRANSIENT;
-				bridge.tryKeyVibrate();
+				//bridge.tryKeyVibrate();
 				return true;
 			}
 

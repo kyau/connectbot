@@ -61,7 +61,7 @@ import de.mud.terminal.vt320;
 public class TerminalBridge implements VDUDisplay {
 	public final static String TAG = "ConnectBot.TerminalBridge";
 
-	public final static int DEFAULT_FONT_SIZE = 18;
+	public final static int DEFAULT_FONT_SIZE = 22;
 	private final static int FONT_SIZE_STEP = 2;
 
 	public Integer[] color;

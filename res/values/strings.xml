@@ -204,9 +204,9 @@
 	<string name="pref_wifilock_summary">"Prevent Wi-Fi from turning off when a session is active"</string>
 
 	<!-- Name for the haptic feedback (bumpy arrow) preference -->
-	<string name="pref_bumpyarrows_title">"Bumpy arrows"</string>
+	<string name="pref_bumpyarrows_title">"Vibrate on keypress"</string>
 	<!-- Summary for the haptic feedback (bumpy arrow) preference -->
-	<string name="pref_bumpyarrows_summary">"Vibrate when sending arrow keys from trackball; useful for laggy connections"</string>
+	<string name="pref_bumpyarrows_summary">"Vibrate when sending keys; useful for laggy connections"</string>
 
 	<!-- Category title for the Terminal Bell preferences -->
 	<string name="pref_bell_category">"Terminal bell"</string>
