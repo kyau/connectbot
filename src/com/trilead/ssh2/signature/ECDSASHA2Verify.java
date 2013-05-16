@@ -38,8 +38,11 @@ public class ECDSASHA2Verify {
 	public static final String ECDSA_SHA2_PREFIX = "ecdsa-sha2-";
 
 	private static final String NISTP256 = "nistp256";
+	private static final String NISTP256_OID = "1.2.840.10045.3.1.7";
 	private static final String NISTP384 = "nistp384";
+	private static final String NISTP384_OID = "1.3.132.0.34";
 	private static final String NISTP521 = "nistp521";
+	private static final String NISTP521_OID = "1.3.132.0.35";
 
 	private static final Map<String, ECParameterSpec> CURVES = new TreeMap<String, ECParameterSpec>();
 	static {
@@ -53,6 +56,30 @@ public class ECDSASHA2Verify {
 		CURVE_SIZES.put(256, NISTP256);
 		CURVE_SIZES.put(384, NISTP384);
 		CURVE_SIZES.put(521, NISTP521);
+	}
+
+	private static final Map<String, String> CURVE_OIDS = new TreeMap<String, String>();
+	static {
+		CURVE_OIDS.put(NISTP256_OID, NISTP256);
+		CURVE_OIDS.put(NISTP384_OID, NISTP256);
+		CURVE_OIDS.put(NISTP521_OID, NISTP256);
+	}
+
+	public static int[] getCurveSizes() {
+		int[] keys = new int[CURVE_SIZES.size()];
+		int i = 0;
+		for (Integer n : CURVE_SIZES.keySet().toArray(new Integer[keys.length])) {
+				keys[i++] = n;
+		}
+		return keys;
+	}
+
+	public static ECParameterSpec getCurveForSize(int size) {
+		final String name = CURVE_SIZES.get(size);
+		if (name == null) {
+			return null;
+		}
+		return CURVES.get(name);
 	}
 
 	public static ECPublicKey decodeSSHECDSAPublicKey(byte[] key) throws IOException
@@ -112,22 +139,37 @@ public class ECDSASHA2Verify {
 
 		tw.writeString(curveName);
 
-		tw.writeBytes(encodeECPoint(key.getW(), key.getParams().getCurve()));
+		byte[] encoded = encodeECPoint(key.getW(), key.getParams().getCurve());
+		tw.writeString(encoded, 0, encoded.length);
 
 		return tw.getBytes();
 	}
 
-	private static String getCurveName(ECParameterSpec params) throws IOException {
+	public static String getCurveName(ECParameterSpec params) throws IOException {
 		int fieldSize = getCurveSize(params);
+		final String curveName = getCurveName(fieldSize);
+		if (curveName == null) {
+			throw new IOException("Invalid curve size: " + fieldSize);
+		}
+		return curveName;
+	}
+	public static String getCurveName(int fieldSize) {
 		String curveName = CURVE_SIZES.get(fieldSize);
 		if (curveName == null) {
-			throw new IOException("Unsupported curve field size: " + fieldSize);
+			return null;
 		}
 		return curveName;
 	}
 
-	private static int getCurveSize(ECParameterSpec params) {
+	public static int getCurveSize(ECParameterSpec params) {
 		return params.getCurve().getField().getFieldSize();
+	}
+
+	public static ECParameterSpec getCurveForOID(String oid) {
+		String name = CURVE_OIDS.get(oid);
+		if (name == null)
+			return null;
+		return CURVES.get(name);
 	}
 
 	public static byte[] decodeSSHECDSASignature(byte[] sig) throws IOException {
@@ -258,7 +300,8 @@ public class ECDSASHA2Verify {
 		TypesWriter rsWriter = new TypesWriter();
 		rsWriter.writeMPInt(r);
 		rsWriter.writeMPInt(s);
-		tw.writeBytes(rsWriter.getBytes());
+		byte[] encoded = rsWriter.getBytes();
+		tw.writeString(encoded, 0, encoded.length);
 
 		return tw.getBytes();
 	}

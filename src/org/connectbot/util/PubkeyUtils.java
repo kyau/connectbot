@@ -33,10 +33,14 @@ import java.security.SecureRandom;
 import java.security.interfaces.DSAParams;
 import java.security.interfaces.DSAPrivateKey;
 import java.security.interfaces.DSAPublicKey;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
 import java.security.interfaces.RSAPrivateCrtKey;
-import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.security.spec.DSAPublicKeySpec;
+import java.security.spec.ECParameterSpec;
+import java.security.spec.ECPoint;
+import java.security.spec.ECPublicKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
 import java.security.spec.KeySpec;
@@ -55,13 +59,19 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.PBEParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.keyczar.jce.EcCore;
+
 import android.util.Log;
 
 import com.trilead.ssh2.crypto.Base64;
+import com.trilead.ssh2.crypto.SimpleDERReader;
 import com.trilead.ssh2.signature.DSASHA1Verify;
+import com.trilead.ssh2.signature.ECDSASHA2Verify;
 import com.trilead.ssh2.signature.RSASHA1Verify;
 
 public class PubkeyUtils {
+	private static final String TAG = "PubkeyUtils";
+
 	public static final String PKCS8_START = "-----BEGIN PRIVATE KEY-----";
 	public static final String PKCS8_END = "-----END PRIVATE KEY-----";
 
@@ -70,6 +80,10 @@ public class PubkeyUtils {
 
 	// Number of iterations for password hashing. PKCS#5 recommends 1000
 	private static final int ITERATIONS = 1000;
+
+	// Cannot be instantiated
+	private PubkeyUtils() {
+	}
 
 	public static String formatKey(Key key){
 		String algo = key.getAlgorithm();
@@ -106,35 +120,28 @@ public class PubkeyUtils {
 		return complete;
 	}
 
-	public static byte[] decrypt(byte[] complete, String secret) throws Exception {
+	public static byte[] decrypt(byte[] saltAndCiphertext, String secret) throws Exception {
 		try {
 			byte[] salt = new byte[SALT_SIZE];
-			byte[] ciphertext = new byte[complete.length - salt.length];
+			byte[] ciphertext = new byte[saltAndCiphertext.length - salt.length];
 
-			System.arraycopy(complete, 0, salt, 0, salt.length);
-			System.arraycopy(complete, salt.length, ciphertext, 0, ciphertext.length);
+			System.arraycopy(saltAndCiphertext, 0, salt, 0, salt.length);
+			System.arraycopy(saltAndCiphertext, salt.length, ciphertext, 0, ciphertext.length);
 
 			return Encryptor.decrypt(salt, ITERATIONS, secret, ciphertext);
 		} catch (Exception e) {
 			Log.d("decrypt", "Could not decrypt with new method", e);
 			// We might be using the old encryption method.
-			return cipher(Cipher.DECRYPT_MODE, complete, secret.getBytes());
+			return cipher(Cipher.DECRYPT_MODE, saltAndCiphertext, secret.getBytes());
 		}
 	}
 
-	public static byte[] getEncodedPublic(PublicKey pk) {
-		return new X509EncodedKeySpec(pk.getEncoded()).getEncoded();
-	}
-
-	public static byte[] getEncodedPrivate(PrivateKey pk) {
-		return new PKCS8EncodedKeySpec(pk.getEncoded()).getEncoded();
-	}
-
 	public static byte[] getEncodedPrivate(PrivateKey pk, String secret) throws Exception {
-		if (secret.length() > 0)
-			return encrypt(getEncodedPrivate(pk), secret);
-		else
-			return getEncodedPrivate(pk);
+		final byte[] encoded = pk.getEncoded();
+		if (secret == null || secret.length() == 0) {
+			return encoded;
+		}
+		return encrypt(pk.getEncoded(), secret);
 	}
 
 	public static PrivateKey decodePrivate(byte[] encoded, String keyType) throws NoSuchAlgorithmException, InvalidKeySpecException {
@@ -156,39 +163,78 @@ public class PubkeyUtils {
 		return kf.generatePublic(pubKeySpec);
 	}
 
-	public static KeyPair recoverKeyPair(byte[] encoded) throws NoSuchAlgorithmException, InvalidKeySpecException {
-		KeySpec privKeySpec = new PKCS8EncodedKeySpec(encoded);
-		KeySpec pubKeySpec;
+	static String getAlgorithmForOid(String oid) throws NoSuchAlgorithmException {
+		if ("1.2.840.10045.2.1".equals(oid)) {
+			return "EC";
+		} else if ("1.2.840.113549.1.1.1".equals(oid)) {
+			return "RSA";
+		} else if ("1.2.840.10040.4.1".equals(oid)) {
+			return "DSA";
+		} else {
+			throw new NoSuchAlgorithmException("Unknown algorithm OID " + oid);
+		}
+	}
 
-		PrivateKey priv;
-		PublicKey pub;
-		KeyFactory kf;
-		try {
-			kf = KeyFactory.getInstance(PubkeyDatabase.KEY_TYPE_RSA);
-			priv = kf.generatePrivate(privKeySpec);
-
-			pubKeySpec = new RSAPublicKeySpec(((RSAPrivateCrtKey) priv)
-					.getModulus(), ((RSAPrivateCrtKey) priv)
-					.getPublicExponent());
-
-			pub = kf.generatePublic(pubKeySpec);
-		} catch (ClassCastException e) {
-			kf = KeyFactory.getInstance(PubkeyDatabase.KEY_TYPE_DSA);
-			priv = kf.generatePrivate(privKeySpec);
-
-			DSAParams params = ((DSAPrivateKey) priv).getParams();
-
-			// Calculate public key Y
-			BigInteger y = params.getG().modPow(((DSAPrivateKey) priv).getX(),
-					params.getP());
-
-			pubKeySpec = new DSAPublicKeySpec(y, params.getP(), params.getQ(),
-					params.getG());
-
-			pub = kf.generatePublic(pubKeySpec);
+	static String getOidFromPkcs8Encoded(byte[] encoded) throws NoSuchAlgorithmException {
+		if (encoded == null) {
+			throw new NoSuchAlgorithmException("encoding is null");
 		}
 
-		return new KeyPair(pub, priv);
+		try {
+			SimpleDERReader reader = new SimpleDERReader(encoded);
+			reader.resetInput(reader.readSequenceAsByteArray());
+			reader.readInt();
+			reader.resetInput(reader.readSequenceAsByteArray());
+			return reader.readOid();
+		} catch (IOException e) {
+			Log.w(TAG, "Could not read OID", e);
+			throw new NoSuchAlgorithmException("Could not read key", e);
+		}
+	}
+
+	public static KeyPair recoverKeyPair(byte[] encoded) throws NoSuchAlgorithmException,
+			InvalidKeySpecException {
+		final String algo = getAlgorithmForOid(getOidFromPkcs8Encoded(encoded));
+
+		final KeySpec privKeySpec = new PKCS8EncodedKeySpec(encoded);
+
+		final KeyFactory kf = KeyFactory.getInstance(algo);
+		final PrivateKey priv = kf.generatePrivate(privKeySpec);
+
+		return new KeyPair(recoverPublicKey(kf, priv), priv);
+	}
+
+	static PublicKey recoverPublicKey(KeyFactory kf, PrivateKey priv)
+			throws NoSuchAlgorithmException, InvalidKeySpecException {
+		if (priv instanceof RSAPrivateCrtKey) {
+			RSAPrivateCrtKey rsaPriv = (RSAPrivateCrtKey) priv;
+
+			return kf.generatePublic(new RSAPublicKeySpec(rsaPriv.getModulus(), rsaPriv
+					.getPublicExponent()));
+		} else if (priv instanceof DSAPrivateKey) {
+			DSAPrivateKey dsaPriv = (DSAPrivateKey) priv;
+			DSAParams params = dsaPriv.getParams();
+
+			// Calculate public key Y
+			BigInteger y = params.getG().modPow(dsaPriv.getX(), params.getP());
+
+			return kf.generatePublic(new DSAPublicKeySpec(y, params.getP(), params.getQ(), params
+					.getG()));
+		} else if (priv instanceof ECPrivateKey) {
+			ECPrivateKey ecPriv = (ECPrivateKey) priv;
+			ECParameterSpec params = ecPriv.getParams();
+
+			// Calculate public key Y
+			ECPoint generator = params.getGenerator();
+			BigInteger[] wCoords = EcCore.multiplyPointA(new BigInteger[] { generator.getAffineX(),
+					generator.getAffineY() }, ecPriv.getS(), params);
+			ECPoint w = new ECPoint(wCoords[0], wCoords[1]);
+
+			return kf.generatePublic(new ECPublicKeySpec(w, params));
+		} else {
+			throw new NoSuchAlgorithmException("Key type must be RSA, DSA, or EC");
+		}
+
 	}
 
 	/*
@@ -208,6 +254,11 @@ public class PubkeyUtils {
 			String data = "ssh-dss ";
 			data += String.valueOf(Base64.encode(DSASHA1Verify.encodeSSHDSAPublicKey((DSAPublicKey) pk)));
 			return data + " " + nickname;
+		} else if (pk instanceof ECPublicKey) {
+			ECPublicKey ecPub = (ECPublicKey) pk;
+			String keyType = ECDSASHA2Verify.getCurveName(ecPub.getParams().getCurve().getField().getFieldSize());
+			String keyData = String.valueOf(Base64.encode(ECDSASHA2Verify.encodeSSHECDSAPublicKey(ecPub)));
+			return ECDSASHA2Verify.ECDSA_SHA2_PREFIX + keyType + " " + keyData + " " + nickname;
 		}
 
 		throw new InvalidKeyException("Unknown key type");
@@ -228,6 +279,8 @@ public class PubkeyUtils {
 				return RSASHA1Verify.encodeSSHRSAPublicKey((RSAPublicKey) pair.getPublic());
 			} else if (pubKey instanceof DSAPublicKey) {
 				return DSASHA1Verify.encodeSSHDSAPublicKey((DSAPublicKey) pair.getPublic());
+			} else if (pubKey instanceof ECPublicKey) {
+				return ECDSASHA2Verify.encodeSSHECDSAPublicKey((ECPublicKey) pair.getPublic());
 			} else {
 				return null;
 			}

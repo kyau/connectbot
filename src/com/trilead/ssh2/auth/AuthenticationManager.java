@@ -36,7 +36,7 @@ import com.trilead.ssh2.transport.TransportManager;
 
 /**
  * AuthenticationManager.
- * 
+ *
  * @author Christian Plattner, plattner@trilead.com
  * @version $Id: AuthenticationManager.java,v 1.1 2007/10/15 12:49:57 cplattne Exp $
  */
@@ -246,6 +246,8 @@ public class AuthenticationManager implements MessageHandler
 			else if (key instanceof ECPrivateKey)
 			{
 				ECPrivateKey pk = (ECPrivateKey) key;
+				final String algo = ECDSASHA2Verify.ECDSA_SHA2_PREFIX
+								+ ECDSASHA2Verify.getCurveName(pk.getParams());
 
 				byte[] pk_enc = ECDSASHA2Verify.encodeSSHECDSAPublicKey((ECPublicKey) pair.getPublic());
 
@@ -259,7 +261,7 @@ public class AuthenticationManager implements MessageHandler
 					tw.writeString("ssh-connection");
 					tw.writeString("publickey");
 					tw.writeBoolean(true);
-					tw.writeString("ecdsa-sha2-nistp256");
+					tw.writeString(algo);
 					tw.writeString(pk_enc, 0, pk_enc.length);
 				}
 
@@ -270,7 +272,7 @@ public class AuthenticationManager implements MessageHandler
 				byte[] ec_sig_enc = ECDSASHA2Verify.encodeSSHECDSASignature(ds, pk.getParams());
 
 				PacketUserauthRequestPublicKey ua = new PacketUserauthRequestPublicKey("ssh-connection", user,
-						"ecdsa-sha2-nistp256", pk_enc, ec_sig_enc);
+						algo, pk_enc, ec_sig_enc);
 
 				tm.sendMessage(ua.getPayload());
 			}
